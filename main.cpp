@@ -12,6 +12,9 @@
 #define VISIBLE_RADIUS_OD .8
 #define VISIBLE_RADIUS_ID .2
 
+#define local static
+//#define local static __attribute__((noinline))
+
 struct vec3
 	{
 	double x;
@@ -25,7 +28,12 @@ struct framestamp
 	std::vector<vec3> points;
 	};
 
-std::vector<vec3> rotate(std::vector<vec3> input, double yaw, double pitch, double roll)
+struct dataset
+	{
+	std::vector<framestamp> frames;
+	};
+
+local std::vector<vec3> rotate(std::vector<vec3> input, double yaw, double pitch, double roll)
 {
 	const double ca = cos(yaw);
 	const double cb = cos(pitch);
@@ -58,17 +66,12 @@ std::vector<vec3> rotate(std::vector<vec3> input, double yaw, double pitch, doub
 	return input;
 }
 
-struct dataset
-	{
-	std::vector<framestamp> frames;
-	};
-
-static uint64_t randns(uint64_t range)
+local uint64_t randns(uint64_t range)
 {
 	return (double)range * (double)rand() / (double)RAND_MAX;
 }
 
-static vec3 randVec(double mag)
+local vec3 randVec(double mag)
 {
 	vec3 v;
 
@@ -85,7 +88,7 @@ static vec3 randVec(double mag)
 	return v;
 }
 
-static framestamp filterVisible(framestamp input, double visibleRadiusId, double visibleRadiusOd)
+local framestamp filterVisible(framestamp input, double visibleRadiusId, double visibleRadiusOd)
 {
 	const double vrid2 = visibleRadiusId * visibleRadiusId;
 	const double vrod2 = visibleRadiusOd * visibleRadiusOd;
@@ -104,7 +107,7 @@ static framestamp filterVisible(framestamp input, double visibleRadiusId, double
 	return f;
 }
 
-static dataset genData(unsigned n, double d_yaw, double d_pitch, double d_roll)
+local dataset genData(unsigned n, double d_yaw, double d_pitch, double d_roll)
 {
 	dataset ret;
 
@@ -134,12 +137,12 @@ static dataset genData(unsigned n, double d_yaw, double d_pitch, double d_roll)
 	return ret;
 }
 
-double dot(vec3 a, vec3 b)
+local double dot(vec3 a, vec3 b)
 {
 return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
-uint64_t evalScore(const dataset & data, double d_yaw, double d_pitch, double d_roll)
+local uint64_t evalScore(const dataset & data, double d_yaw, double d_pitch, double d_roll)
 {
 	double accum = 0;
 	for( unsigned i = 0; i < data.frames.size() - 1; ++i)
