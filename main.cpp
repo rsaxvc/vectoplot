@@ -213,4 +213,10 @@ for( int i = 900; i <= 1100; i += 1)
 	uint64_t score = evalScore(data, d_yaw, dp, d_roll);
 	std::cout << dp <<','<< score << std::endl;
 	}
+
+volatile uint64_t temp = 0;
+while(1)
+	{
+	temp += evalScore(data, d_yaw, d_pitch, d_roll);
+	}
 }
