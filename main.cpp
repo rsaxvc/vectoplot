@@ -182,7 +182,7 @@ float d_yaw = RPM_YAW * 2 * M_PI / 60;
 float d_pitch = RPM_PITCH * 2 * M_PI / 60;
 float d_roll = RPM_ROLL * 2 * M_PI / 60;
 
-std::cout << "Sim Params:"<<d_yaw<<','<<d_pitch<<','<<d_roll << std::endl;
+//std::cout << "Sim Params:"<<d_yaw<<','<<d_pitch<<','<<d_roll << std::endl;
 
 dataset data = genData(N_FRAMES, d_yaw, d_pitch, d_roll);
 /*
@@ -214,9 +214,11 @@ for( int i = 900; i <= 1100; i += 1)
 	std::cout << dp <<','<< score << std::endl;
 	}
 
+/*
 volatile uint64_t temp = 0;
 while(1)
 	{
 	temp += evalScore(data, d_yaw, d_pitch, d_roll);
 	}
+*/
 }

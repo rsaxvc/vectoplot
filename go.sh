@@ -1,2 +1,2 @@
 #!/bin/sh
-g++ main.cpp -Wall -Og && ./a.out  | tee output.csv | less
+g++ main.cpp -Wall -Og && ./a.out  | tee output.csv | less && ./plot.py
