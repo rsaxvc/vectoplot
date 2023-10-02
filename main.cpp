@@ -1,9 +1,15 @@
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
 #include <vector>
 
+#define BALL_DIAM_MM 42.67f
+#define BALL_CIRC_MM (float)(BALL_DIAM_MM * M_PI)
+#define DIMPLE_DIAM_MM (3.5f)
+#define DIMPLE_DIAM_RATIO_BALL_CIRC (DIMPLE_DIAM_MM/BALL_CIRC_MM)
+#define DIMPLE_DIAM_RATIO_BALL_DIAM (DIMPLE_DIAM_MM/BALL_DIAM_MM)
 #define N_DIMPLES 400
 #define N_FRAMES 20
 #define RPM_YAW 0
@@ -22,10 +28,12 @@ struct vec3
 	float z;
 	};
 
+typedef std::vector<vec3> vecs;
+
 struct framestamp
 	{
 	uint64_t ns;
-	std::vector<vec3> points;
+	vecs points;
 	};
 
 struct dataset
@@ -143,6 +151,46 @@ local float dot(vec3 a, vec3 b)
 return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
+local bool compareByX(const vec3 &a, const vec3 &b)
+{
+    return a.x < b.x;
+}
+
+local unsigned findGteX(const vecs & v, const float x)
+{
+	for(unsigned i = 0; i < v.size(); ++i)
+	{
+		if(v[i].x > x) return i;
+	}
+	return v.size();
+/*
+	size_t start = 0;
+	size_t stop = v.size();
+	auto start_x = v[start].x;
+	auto stop_x = v[stop-1].x;
+
+	while(1)
+	{
+		auto midpoint = (start + stop+1)/2;
+		auto mid_x = v[midpoint].x;
+		if(x > mid_x)
+			{
+			start = midpoint;
+			start_x = mid_x;
+			}
+		else if(x < mid_x)
+			{
+			stop = midpoint;
+			stop_x = mid_x;
+			}
+		else
+			{
+			return midpoint;
+			}
+	}
+*/
+}
+
 local uint64_t evalScore(const dataset & data, float d_yaw, float d_pitch, float d_roll)
 {
 	float accum = 0;
@@ -158,6 +206,9 @@ local uint64_t evalScore(const dataset & data, float d_yaw, float d_pitch, float
 		const float f1_roll = d_roll * f1.ns / 1e9;
 		framestamp f1_rotated = {f1.ns};
 		f1_rotated.points = rotate(f1.points, -f1_yaw, -f1_pitch, -f1_roll);
+
+		//sort the vectors by X.
+		std::sort(f1_rotated.points.begin(), f1_rotated.points.end(), compareByX);
 		rotated.frames.push_back(f1_rotated);
 		}
 
@@ -169,11 +220,15 @@ local uint64_t evalScore(const dataset & data, float d_yaw, float d_pitch, float
 			{
 			const auto & f2 = rotated.frames[j];
 
-			static const float DOT_LIMIT = .999995;
-//			static const float DOT_LIMIT = .9995;
+			static constexpr float DOT_LIMIT = cos(DIMPLE_DIAM_RATIO_BALL_CIRC / 2);
+//			static constexpr float DOT_LIMIT = .999995;
+//			static constexpr float DOT_LIMIT = .9995;
 			for( unsigned k = 0; k < f1.points.size(); ++k)
 				{
-				for( unsigned l = 0; l < f2.points.size(); ++l)
+				float min_x = f1.points[k].x - DIMPLE_DIAM_RATIO_BALL_DIAM * .75;
+				auto start = findGteX(f1.points, min_x);
+
+				for( unsigned l = start; l < f2.points.size(); ++l)
 					{
 					float d = dot(f1.points[k], f2.points[l]);
 					if( d > DOT_LIMIT)
@@ -218,19 +273,17 @@ for( unsigned i = 0; i < data.frames.size(); ++i)
 */
 
 std::cout << "d_pitch,score" << std::endl;
-for( int i = 900; i <= 1100; i += 1)
-//for( int i = -5000; i <= 5000; i += 25)
+//for( int i = 900; i <= 1100; i += 1)
+for( int i = -5000; i <= 5000; i += 5)
 	{
 	float dp = d_pitch * (float)i / (float)1000;
 	uint64_t score = evalScore(data, d_yaw, dp, d_roll);
 	std::cout << dp <<','<< score << std::endl;
 	}
 
-/*
 volatile uint64_t temp = 0;
 while(1)
 	{
 	temp += evalScore(data, d_yaw, d_pitch, d_roll);
 	}
-*/
 }
