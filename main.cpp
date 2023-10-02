@@ -158,11 +158,14 @@ local bool compareByX(const vec3 &a, const vec3 &b)
 
 local unsigned findGteX(const vecs & v, const float x)
 {
-	for(unsigned i = 0; i < v.size(); ++i)
+	auto end = v.size();
+	for(unsigned i = 0; i < end; ++i)
 	{
 		if(v[i].x > x) return i;
 		auto mid = (i + v.size())/2;
-		if(v[mid].x < x)  i = mid;
+		auto midx = v[mid].x;
+		if(x > midx)  i = mid;
+		if(x < midx)  end = mid;
 	}
 	return v.size();
 /*
