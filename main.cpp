@@ -146,30 +146,36 @@ return a.x * b.x + a.y * b.y + a.z * b.z;
 local uint64_t evalScore(const dataset & data, float d_yaw, float d_pitch, float d_roll)
 {
 	float accum = 0;
-	for( unsigned i = 0; i < data.frames.size() - 1; ++i)
+	dataset rotated;
+	rotated.frames.reserve(data.frames.size());
+	for( unsigned i = 0; i < data.frames.size(); ++i)
 		{
-		//rotate each vector backward to t=0
+		//rotate all vectors backward to t=0
 		const auto & f1 = data.frames[i];
+
 		const float f1_yaw = d_yaw * f1.ns / 1e9;
 		const float f1_pitch = d_pitch * f1.ns / 1e9;
 		const float f1_roll = d_roll * f1.ns / 1e9;
-		std::vector<vec3> f1_rotated = rotate(f1.points, -f1_yaw, -f1_pitch, -f1_roll);
+		framestamp f1_rotated = {f1.ns};
+		f1_rotated.points = rotate(f1.points, -f1_yaw, -f1_pitch, -f1_roll);
+		rotated.frames.push_back(f1_rotated);
+		}
+
+	for( unsigned i = 0; i < data.frames.size() - 1; ++i)
+		{
+		const auto & f1 = rotated.frames[i];
 
 		for( unsigned j = i + 1; j < data.frames.size(); ++j)
 			{
-			const auto & f2 = data.frames[j];
-			const float f2_yaw = d_yaw * f2.ns / 1e9;
-			const float f2_pitch = d_pitch * f2.ns / 1e9;
-			const float f2_roll = d_roll * f2.ns / 1e9;
-			std::vector<vec3> f2_rotated = rotate(f2.points, -f2_yaw, -f2_pitch, -f2_roll);
+			const auto & f2 = rotated.frames[j];
 
 			static const float DOT_LIMIT = .999995;
 //			static const float DOT_LIMIT = .9995;
-			for( unsigned k = 0; k < f1_rotated.size(); ++k)
+			for( unsigned k = 0; k < f1.points.size(); ++k)
 				{
 				for( unsigned l = 0; l < f2.points.size(); ++l)
 					{
-					float d = dot(f1_rotated[k], f2_rotated[l]);
+					float d = dot(f1.points[k], f2.points[l]);
 					if( d > DOT_LIMIT)
 						{
 						accum += (d - DOT_LIMIT) / (1 - DOT_LIMIT);
