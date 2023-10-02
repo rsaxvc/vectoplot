@@ -2,18 +2,25 @@
 import csv
 import matplotlib.pyplot as plt
 
-x=[]
-y=[]
+yaw=[]
+pitch=[]
+roll=[]
+score=[]
 with open('output.csv', newline='') as csvfile:
 	r = csv.reader(csvfile, delimiter=',', quotechar='|')
 	next(r)
 	for row in r:
-		x.append(float(row[0]))
-		y.append(int(row[1]))
+		yaw.append(float(row[0]))
+		pitch.append(float(row[1]))
+		roll.append(float(row[2]))
+		score.append(int(row[3]))
 
 # plot
-#plt.plot(x, y, linewidth=2.0)
-print(x)
-print(y)
-plt.plot(x, y)
+plt.plot(yaw, score)
+plt.show()
+
+plt.plot(pitch, score)
+plt.show()
+
+plt.plot(roll, score)
 plt.show()

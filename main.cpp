@@ -248,6 +248,47 @@ local uint64_t evalScore(const dataset & data, float d_yaw, float d_pitch, float
 	return accum;
 }
 
+local void findBest
+	(
+	const dataset & data,
+	float yaw,
+	float yaw_range,
+	float yaw_grain,
+	float pitch,
+	float pitch_range,
+	float pitch_grain,
+	float roll,
+	float roll_range,
+	float roll_grain,
+	uint64_t & best_score,
+	float & best_rpm_yaw,
+	float & best_rpm_pitch,
+	float & best_rpm_roll
+	)
+{
+	for( float rpm_yaw = yaw - yaw_range; rpm_yaw < yaw + yaw_range; rpm_yaw += yaw_grain)
+	{
+		float d_yaw = rpm_yaw / 60;
+		for( float rpm_pitch = pitch - pitch_range; rpm_pitch < pitch + pitch_range; rpm_pitch += pitch_grain)
+		{
+			float d_pitch = rpm_pitch / 60;
+			for( float rpm_roll = roll - roll_range; rpm_roll < roll + roll_range; rpm_roll += roll_grain)
+			{
+				float d_roll = rpm_roll / 60;
+				uint64_t score = evalScore(data, d_yaw, d_pitch, d_roll);
+				std::cout << d_yaw <<','<< d_pitch << ',' << d_roll << ',' << score << std::endl;
+				if( score > best_score)
+				{
+					best_score = score;
+					best_rpm_yaw = rpm_yaw;
+					best_rpm_pitch = rpm_pitch;
+					best_rpm_roll = rpm_roll;
+				}
+			}
+		}
+	}
+}
+
 int main()
 {
 float d_yaw = RPM_YAW * 2 * M_PI / 60;
@@ -277,7 +318,45 @@ for( unsigned i = 0; i < data.frames.size(); ++i)
 	}
 */
 
-std::cout << "d_pitch,score" << std::endl;
+std::cout << "d_yaw,d_pitch,d_roll,score" << std::endl;
+#define YAW_SEARCH_RPM 2500
+#define PITCH_SEARCH_RPM 10000
+#define ROLL_SEARCH_RPM 500
+uint64_t best_score = 0;
+float best_rpm_yaw = 0, best_rpm_pitch = 0, best_rpm_roll = 0;
+
+float yaw_range = YAW_SEARCH_RPM;
+float pitch_range = PITCH_SEARCH_RPM;
+float roll_range = ROLL_SEARCH_RPM;
+#define YAW_CHUNK 6
+#define PITCH_CHUNK 6
+#define ROLL_CHUNK 4
+float yaw_step = YAW_SEARCH_RPM / YAW_CHUNK;
+float pitch_step = PITCH_SEARCH_RPM / PITCH_CHUNK;
+float roll_step = ROLL_SEARCH_RPM / ROLL_CHUNK;
+
+static const char * const stage_names[]={"coarse","mid","fine","ultra","hyper"};
+
+for( unsigned refine = 0; refine < 3; refine++)
+	{
+	findBest
+		(
+		data,
+		best_rpm_yaw, 1.5 * yaw_range, yaw_step,
+		best_rpm_pitch, 1.5 * pitch_range, pitch_step,
+		best_rpm_roll, 1.5 * roll_range, roll_step,
+		best_score, best_rpm_yaw, best_rpm_pitch, best_rpm_roll
+		);
+	yaw_range = yaw_step;
+	pitch_range = pitch_step;
+	roll_range = roll_step;
+	yaw_step /= YAW_CHUNK;
+	pitch_step /= PITCH_CHUNK;
+	roll_step /= ROLL_CHUNK;
+	std::cerr<<stage_names[refine]<<"fix:"<<best_rpm_yaw<<','<<best_rpm_pitch<<','<<best_rpm_roll<<':'<<best_score<<std::endl;
+	}
+
+/*
 for( int i = 900; i <= 1100; i += 1)
 //for( int i = -5000; i <= 5000; i += 5)
 	{
@@ -285,6 +364,7 @@ for( int i = 900; i <= 1100; i += 1)
 	uint64_t score = evalScore(data, d_yaw, dp, d_roll);
 	std::cout << dp <<','<< score << std::endl;
 	}
+*/
 
 /*
 volatile uint64_t temp = 0;
