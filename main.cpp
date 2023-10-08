@@ -17,6 +17,7 @@
 #define RPM_ROLL 0
 #define VISIBLE_RADIUS_OD .8
 #define VISIBLE_RADIUS_ID .2
+#define DROP_RATIO .2
 
 #define local static
 //#define local static __attribute__((noinline))
@@ -104,10 +105,25 @@ local framestamp filterVisible(framestamp input, float visibleRadiusId, float vi
 
 	for( unsigned i = 0; i < input.points.size(); ++i)
 		{
-		vec3 p = input.points[i];
-		float r = p.x * p.x + p.y * p.y;
+		const vec3 p = input.points[i];
+		const float r = p.x * p.x + p.y * p.y;
 		//point must not be inside ID, must be inside OD, and must be Z+
 		if(r > vrid2 && r < vrod2 && p.z > 0)
+			{
+			f.points.push_back(p);
+			}
+		}
+	return f;
+}
+
+local framestamp filterPct(framestamp input, float dropRatio)
+{
+	const int dropMax = RAND_MAX * dropRatio;
+	framestamp f = {input.ns};
+	for( unsigned i = 0; i < input.points.size(); ++i)
+		{
+		const vec3 p = input.points[i];
+		if(rand() > dropMax)
 			{
 			f.points.push_back(p);
 			}
@@ -136,6 +152,7 @@ local dataset genData(unsigned n, float d_yaw, float d_pitch, float d_roll)
 		//Rotate the vectors forward in time according to current timestamp
 		framestamp frame = {ts};
 		frame.points = rotate(frame0.points, yaw, pitch, roll);
+		frame = filterPct(frame, DROP_RATIO);
 		frame = filterVisible(frame, VISIBLE_RADIUS_ID, VISIBLE_RADIUS_OD);
 
 		ret.frames.push_back(frame);
@@ -328,28 +345,28 @@ float best_rpm_yaw = 0, best_rpm_pitch = 0, best_rpm_roll = 0;
 float yaw_range = YAW_SEARCH_RPM;
 float pitch_range = PITCH_SEARCH_RPM;
 float roll_range = ROLL_SEARCH_RPM;
-#define YAW_CHUNK 6
-#define PITCH_CHUNK 6
-#define ROLL_CHUNK 4
+#define YAW_CHUNK 5
+#define PITCH_CHUNK 10
+#define ROLL_CHUNK 3
 float yaw_step = YAW_SEARCH_RPM / YAW_CHUNK;
 float pitch_step = PITCH_SEARCH_RPM / PITCH_CHUNK;
 float roll_step = ROLL_SEARCH_RPM / ROLL_CHUNK;
 
 static const char * const stage_names[]={"coarse","mid","fine","ultra","hyper"};
 
-for( unsigned refine = 0; refine < 3; refine++)
+for( unsigned refine = 0; refine < 2; refine++)
 	{
 	findBest
 		(
 		data,
-		best_rpm_yaw, 1.5 * yaw_range, yaw_step,
-		best_rpm_pitch, 1.5 * pitch_range, pitch_step,
-		best_rpm_roll, 1.5 * roll_range, roll_step,
+		best_rpm_yaw, yaw_range, yaw_step,
+		best_rpm_pitch, pitch_range, pitch_step,
+		best_rpm_roll, roll_range, roll_step,
 		best_score, best_rpm_yaw, best_rpm_pitch, best_rpm_roll
 		);
-	yaw_range = yaw_step;
-	pitch_range = pitch_step;
-	roll_range = roll_step;
+	yaw_range = yaw_step * 2;
+	pitch_range = pitch_step * 2;
+	roll_range = roll_step * 2;
 	yaw_step /= YAW_CHUNK;
 	pitch_step /= PITCH_CHUNK;
 	roll_step /= ROLL_CHUNK;
