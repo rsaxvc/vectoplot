@@ -316,24 +316,24 @@ for( unsigned i = 0; i < data.frames.size(); ++i)
 
 std::cout << "d_yaw,d_pitch,d_roll,score" << std::endl;
 #define YAW_SEARCH_RPM 2500
-#define PITCH_SEARCH_RPM 10000
+#define PITCH_SEARCH_RPM 12000
 #define ROLL_SEARCH_RPM 500
 uint64_t best_score = 0;
-float best_rpm_yaw = 0, best_rpm_pitch = 0, best_rpm_roll = 0;
+float best_rpm_yaw = 0, best_rpm_pitch = 2000, best_rpm_roll = 0;
 
 float yaw_range = YAW_SEARCH_RPM;
 float pitch_range = PITCH_SEARCH_RPM;
 float roll_range = ROLL_SEARCH_RPM;
-#define YAW_CHUNK 5
-#define PITCH_CHUNK 10
-#define ROLL_CHUNK 3
-float yaw_step = YAW_SEARCH_RPM / YAW_CHUNK;
-float pitch_step = PITCH_SEARCH_RPM / PITCH_CHUNK;
-float roll_step = ROLL_SEARCH_RPM / ROLL_CHUNK;
+#define YAW_CHUNK 8
+#define PITCH_CHUNK 15
+#define ROLL_CHUNK 6
+float yaw_step = 2 * yaw_range / YAW_CHUNK;
+float pitch_step = 2 * pitch_range / PITCH_CHUNK;
+float roll_step = 2 * roll_range / ROLL_CHUNK;
 
-static const char * const stage_names[]={"coarse","mid","fine","ultra","hyper"};
+static const char * const stage_names[]={"coarse","mid","fine","ultra","hyper", "!!!"};
 
-for( unsigned refine = 0; refine < 2; refine++)
+for( unsigned refine = 0; refine < 5; refine++)
 	{
 	findBest
 		(
@@ -346,9 +346,9 @@ for( unsigned refine = 0; refine < 2; refine++)
 	yaw_range = yaw_step * 2;
 	pitch_range = pitch_step * 2;
 	roll_range = roll_step * 2;
-	yaw_step /= YAW_CHUNK;
-	pitch_step /= PITCH_CHUNK;
-	roll_step /= ROLL_CHUNK;
+	yaw_step = 2 * yaw_range / YAW_CHUNK;
+	pitch_step = 2 * pitch_range / PITCH_CHUNK;
+	roll_step = 2 * roll_range / ROLL_CHUNK;
 	std::cerr<<stage_names[refine]<<"fix:"<<best_rpm_yaw<<','<<best_rpm_pitch<<','<<best_rpm_roll<<':'<<best_score<<std::endl;
 	}
 
