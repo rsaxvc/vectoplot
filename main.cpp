@@ -180,10 +180,10 @@ local unsigned findGteX(const vecs & v, const float x)
 	for(unsigned i = 0; i < end; ++i)
 	{
 		if(v[i].x > x) return i;
-		auto mid = (i + v.size())/2;
+		auto mid = (i + end)/2;
 		auto midx = v[mid].x;
-		if(x > midx)  i = mid;
-		if(x < midx)  end = mid;
+		if(midx < x)  i = mid;
+		if(midx > x)  end = mid + 1;
 	}
 	return v.size();
 }
