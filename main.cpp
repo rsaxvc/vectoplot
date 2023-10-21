@@ -19,6 +19,7 @@
 #define VISIBLE_RADIUS_ID .2
 #define DROP_RATIO .2
 
+//Can use this to prevent inlining for profiling
 #define local static
 //#define local static __attribute__((noinline))
 
@@ -321,6 +322,14 @@ local void findBest
 	}
 }
 
+static uint64_t gettime_ns(void)
+{
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+	return ts.tv_sec * 1000000000 + ts.tv_nsec;
+}
+
+
 int main()
 {
 float d_yaw = RPM_YAW * 2 * M_PI / 60;
@@ -367,6 +376,8 @@ float yaw_step = 2 * yaw_range / YAW_CHUNK;
 float pitch_step = 2 * pitch_range / PITCH_CHUNK;
 float roll_step = 2 * roll_range / ROLL_CHUNK;
 
+#if 1
+//An example solver
 static const char * const stage_names[]={"coarse","mid","fine","ultra","hyper", "!!!"};
 
 for( unsigned refine = 0; refine < 5; refine++)
@@ -387,22 +398,22 @@ for( unsigned refine = 0; refine < 5; refine++)
 	roll_step = 2 * roll_range / ROLL_CHUNK;
 	std::cerr<<stage_names[refine]<<"fix:"<<best_rpm_yaw<<','<<best_rpm_pitch<<','<<best_rpm_roll<<':'<<best_score<<std::endl;
 	}
-
-/*
-for( int i = 900; i <= 1100; i += 1)
-//for( int i = -5000; i <= 5000; i += 5)
-	{
-	float dp = d_pitch * (float)i / (float)1000;
-	uint64_t score = evalScore(data, d_yaw, dp, d_roll);
-	std::cout << dp <<','<< score << std::endl;
-	}
-*/
-
-/*
+#elif 1
+//Infinite loop for profiling
 volatile uint64_t temp = 0;
+
 while(1)
 	{
-	temp += evalScore(data, d_yaw, d_pitch, d_roll);
+	static const unsigned COUNT = 1000;
+	uint64_t start = gettime_ns();
+	for(unsigned i = 0; i < COUNT; ++i)
+		{
+		temp += evalScore(data, d_yaw, d_pitch, d_roll);
+		}
+	uint64_t delta = gettime_ns() - start;
+	std::cerr<<"did "<< 1.0e9*(double)COUNT/(double)delta << " evalScore()s per second"<<std::endl;
 	}
-*/
+#else
+	#error "nothing to do"
+#endif
 }
