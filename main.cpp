@@ -44,12 +44,12 @@ struct dataset
 
 local std::vector<vec3> rotate(std::vector<vec3> input, float yaw, float pitch, float roll)
 {
-	const float ca = cos(yaw);
-	const float cb = cos(pitch);
-	const float cy = cos(roll);
-	const float sa = sin(yaw);
-	const float sb = sin(pitch);
-	const float sy = sin(roll);
+	const float ca = cosf(yaw);
+	const float cb = cosf(pitch);
+	const float cy = cosf(roll);
+	const float sa = sinf(yaw);
+	const float sb = sinf(pitch);
+	const float sy = sinf(roll);
 
 	const float m00 = ca * cb;
 	const float m01 = ca * sb * sy - sa * cy;
