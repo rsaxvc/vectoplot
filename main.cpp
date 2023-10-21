@@ -185,32 +185,29 @@ local unsigned findGteX(const vecs & v, const float x)
 		if(x < midx)  end = mid;
 	}
 	return v.size();
-/*
-	size_t start = 0;
-	size_t stop = v.size();
-	auto start_x = v[start].x;
-	auto stop_x = v[stop-1].x;
+}
 
-	while(1)
+local float evalScore(const framestamp & f1, const framestamp & f2)
+{
+	float accum = 0;
+
+	static constexpr float DOT_LIMIT = cos(DIMPLE_DIAM_RATIO_BALL_CIRC / 2);
+	for( unsigned k = 0; k < f1.points.size(); ++k)
 	{
-		auto midpoint = (start + stop+1)/2;
-		auto mid_x = v[midpoint].x;
-		if(x > mid_x)
+		float min_x = f1.points[k].x - DIMPLE_DIAM_RATIO_BALL_DIAM * .75;
+		auto start = findGteX(f1.points, min_x);
+
+		for( unsigned l = start; l < f2.points.size(); ++l)
+		{
+			float d = dot(f1.points[k], f2.points[l]);
+			if( d > DOT_LIMIT)
 			{
-			start = midpoint;
-			start_x = mid_x;
+				accum += (d - DOT_LIMIT) / (1 - DOT_LIMIT);
+				break;
 			}
-		else if(x < mid_x)
-			{
-			stop = midpoint;
-			stop_x = mid_x;
-			}
-		else
-			{
-			return midpoint;
-			}
+		}
 	}
-*/
+	return accum;
 }
 
 local uint64_t evalScore(const dataset & data, float d_yaw, float d_pitch, float d_roll)
@@ -241,25 +238,7 @@ local uint64_t evalScore(const dataset & data, float d_yaw, float d_pitch, float
 		for( unsigned j = i + 1; j < data.frames.size(); ++j)
 			{
 			const auto & f2 = rotated.frames[j];
-
-			static constexpr float DOT_LIMIT = cos(DIMPLE_DIAM_RATIO_BALL_CIRC / 2);
-//			static constexpr float DOT_LIMIT = .999995;
-//			static constexpr float DOT_LIMIT = .9995;
-			for( unsigned k = 0; k < f1.points.size(); ++k)
-				{
-				float min_x = f1.points[k].x - DIMPLE_DIAM_RATIO_BALL_DIAM * .75;
-				auto start = findGteX(f1.points, min_x);
-
-				for( unsigned l = start; l < f2.points.size(); ++l)
-					{
-					float d = dot(f1.points[k], f2.points[l]);
-					if( d > DOT_LIMIT)
-						{
-						accum += (d - DOT_LIMIT) / (1 - DOT_LIMIT);
-						break;
-						}
-					}
-				}
+			accum += evalScore(f1, f2);
 			}
 		}
 	return accum;
