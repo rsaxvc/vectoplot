@@ -192,20 +192,56 @@ local float evalScore(const framestamp & f1, const framestamp & f2)
 	float accum = 0;
 
 	static constexpr float DOT_LIMIT = cos(DIMPLE_DIAM_RATIO_BALL_CIRC / 2);
-	for( unsigned k = 0; k < f1.points.size(); ++k)
+	for( unsigned k = 0; k < f2.points.size(); ++k)
 	{
-		float min_x = f1.points[k].x - DIMPLE_DIAM_RATIO_BALL_DIAM * .75;
-		auto start = findGteX(f1.points, min_x);
-
-		for( unsigned l = start; l < f2.points.size(); ++l)
+		float min_x = f2.points[k].x - DIMPLE_DIAM_RATIO_BALL_DIAM * .75;
+		float max_x = f2.points[k].x + DIMPLE_DIAM_RATIO_BALL_DIAM * .75;
+		auto end = f1.points.size();
+//Below follows two approaches, one may be slightly faster on some machines.
+#if 0
+		//Binary search f1 from both ends
+		for( size_t l = 0; l < end; ++l)
 		{
-			float d = dot(f1.points[k], f2.points[l]);
+			if(f1.points[l].x > max_x) break;
+			auto mid = (l + end)/2;
+			auto midx = f1.points[mid].x;
+            //printf("l=%u mid=%u end=%u\n", (unsigned)l, (unsigned)mid, (unsigned)end);
+			if(midx < min_x)
+			{
+				l = mid;
+				continue;
+			}
+			if(midx > max_x)
+			{
+				end = mid;
+			}
+
+			float d = dot(f2.points[k], f1.points[l]);
 			if( d > DOT_LIMIT)
 			{
 				accum += (d - DOT_LIMIT) / (1 - DOT_LIMIT);
 				break;
 			}
 		}
+#elif 1
+		//Binary search f1 from the left, then scan right and terminate early
+		auto start = findGteX(f1.points, min_x);
+
+		for( unsigned l = start; l < end && f1.points[l].x <= max_x; ++l)
+		{
+			float d = dot(f2.points[k], f1.points[l]);
+			if( d > DOT_LIMIT)
+			{
+				//very little thought was put into this cost function. It needs the following properties:
+				//Return a higher value the closer d is to 1.
+				//And, it needs offset by DOT_LIMIT, since without doing so, everything would be in the short range [DOT_LIMIT, 1]
+				accum += (d - DOT_LIMIT) / (1 - DOT_LIMIT);
+				break;
+			}
+		}
+#else
+	#error "insert your optimized version here"
+#endif
 	}
 	return accum;
 }
