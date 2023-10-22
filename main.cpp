@@ -318,7 +318,7 @@ static uint64_t gettime_ns(void)
 {
 	struct timespec ts;
 	clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
-	return ts.tv_sec * 1000000000 + ts.tv_nsec;
+	return ts.tv_sec * 1000000000ULL + ts.tv_nsec;
 }
 
 
