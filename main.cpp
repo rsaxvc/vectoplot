@@ -216,8 +216,13 @@ local float evalScore(const framestamp & f1, const framestamp & f2)
 	static constexpr float DOT_LIMIT_D_INV = 1/(DOT_LIMIT_D);
 	for( unsigned k = 0; k < f2.points.size(); ++k)
 	{
-		float min_x = f2.points[k].x - DIMPLE_DIAM_RATIO_BALL_DIAM * .75;
-		float max_x = f2.points[k].x + DIMPLE_DIAM_RATIO_BALL_DIAM * .75;
+		//These limits allow us to scan a limited portion of
+		//the vectors for one frame. If they are too wide,
+		//the search takes a little longer. If they are too narrow,
+		//we might miss things.
+		//These should be calculable but I haven't done it.
+		float min_x = f2.points[k].x - DIMPLE_DIAM_RATIO_BALL_DIAM * .05;
+		float max_x = f2.points[k].x + DIMPLE_DIAM_RATIO_BALL_DIAM * .05;
 		auto end = f1.points.size();
 
 		//Binary search f1 from the left, then scan right and terminate early
