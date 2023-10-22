@@ -174,16 +174,33 @@ local bool compareByX(const vec3 &a, const vec3 &b)
     return a.x < b.x;
 }
 
+//given a sorted vector, find the first element
+//whose x-value is >= x;
 local unsigned findGteX(const vecs & v, const float x)
 {
 	auto end = v.size();
 	for(unsigned i = 0; i < end; ++i)
 	{
-		if(v[i].x > x) return i;
 		auto mid = (i + end)/2;
 		auto midx = v[mid].x;
-		if(midx < x)  i = mid;
-		if(midx > x)  end = mid + 1;
+		if(midx < x)
+		{
+			//midpoint value is less than search target x,
+			//advance to the midpoint, skipping everything between i and mid.
+			i = mid;
+			continue;
+		}
+		else if(v[i].x > x)
+		{
+			//This is the normal return path
+			return i;
+		}
+		else if(midx > x)
+		{
+			//midpoint value is greater than search target x
+			//reduce search area accordingly
+			end = mid + 1;
+		}
 	}
 	return v.size();
 }
@@ -202,37 +219,11 @@ local float evalScore(const framestamp & f1, const framestamp & f2)
 		float min_x = f2.points[k].x - DIMPLE_DIAM_RATIO_BALL_DIAM * .75;
 		float max_x = f2.points[k].x + DIMPLE_DIAM_RATIO_BALL_DIAM * .75;
 		auto end = f1.points.size();
-//Below follows two approaches, one may be slightly faster on some machines.
-#if 0
-		//Binary search f1 from both ends
-		for( size_t l = 0; l < end; ++l)
-		{
-			if(f1.points[l].x > max_x) break;
-			auto mid = (l + end)/2;
-			auto midx = f1.points[mid].x;
-            //printf("l=%u mid=%u end=%u\n", (unsigned)l, (unsigned)mid, (unsigned)end);
-			if(midx < min_x)
-			{
-				l = mid;
-				continue;
-			}
-			if(midx > max_x)
-			{
-				end = mid;
-			}
 
-			float d = dot(f2.points[k], f1.points[l]);
-			if( d > DOT_LIMIT)
-			{
-				accum += (d - DOT_LIMIT) * DOT_LIMIT_D_INV;
-				break;
-			}
-		}
-#elif 1
 		//Binary search f1 from the left, then scan right and terminate early
 		auto start = findGteX(f1.points, min_x);
 
-		for( unsigned l = start; l < end && f1.points[l].x <= max_x; ++l)
+		for( auto l = start; l < end && f1.points[l].x <= max_x; ++l)
 		{
 			float d = dot(f2.points[k], f1.points[l]);
 			if( d > DOT_LIMIT)
@@ -244,9 +235,6 @@ local float evalScore(const framestamp & f1, const framestamp & f2)
 				break;
 			}
 		}
-#else
-	#error "insert your optimized version here"
-#endif
 	}
 	return accum;
 }
