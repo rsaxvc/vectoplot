@@ -89,7 +89,7 @@ local vec3 randVec(float mag)
 	v.y = rand() - RAND_MAX / 2;
 	v.z = rand() - RAND_MAX / 2;
 
-	float normalize = mag/fsqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+	float normalize = mag/sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
 
 	v.x *= normalize;
 	v.y *= normalize;
