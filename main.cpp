@@ -193,6 +193,10 @@ local float evalScore(const framestamp & f1, const framestamp & f2)
 	float accum = 0;
 
 	static constexpr float DOT_LIMIT = cos(DIMPLE_DIAM_RATIO_BALL_CIRC / 2);
+	//Pre-compute the inverse at compile-time so we can use multiplication instead;
+	//very, very slightly less accurate, yet faster :)
+	static constexpr float DOT_LIMIT_D = 1 - DOT_LIMIT;
+	static constexpr float DOT_LIMIT_D_INV = 1/(DOT_LIMIT_D);
 	for( unsigned k = 0; k < f2.points.size(); ++k)
 	{
 		float min_x = f2.points[k].x - DIMPLE_DIAM_RATIO_BALL_DIAM * .75;
@@ -220,7 +224,7 @@ local float evalScore(const framestamp & f1, const framestamp & f2)
 			float d = dot(f2.points[k], f1.points[l]);
 			if( d > DOT_LIMIT)
 			{
-				accum += (d - DOT_LIMIT) / (1 - DOT_LIMIT);
+				accum += (d - DOT_LIMIT) * DOT_LIMIT_D_INV;
 				break;
 			}
 		}
@@ -236,7 +240,7 @@ local float evalScore(const framestamp & f1, const framestamp & f2)
 				//very little thought was put into this cost function. It needs the following properties:
 				//Return a higher value the closer d is to 1.
 				//And, it needs offset by DOT_LIMIT, since without doing so, everything would be in the short range [DOT_LIMIT, 1]
-				accum += (d - DOT_LIMIT) / (1 - DOT_LIMIT);
+				accum += (d - DOT_LIMIT) * DOT_LIMIT_D_INV;
 				break;
 			}
 		}
