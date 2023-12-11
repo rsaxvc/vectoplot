@@ -1,3 +1,10 @@
+/*
+This is an algorithm to estimate the spin of a ball, based
+on only a large number of points around the ball, as the ball
+flies. It is assumed that image processing has already occured,
+and that suitable features detected on the ball. This algorithm
+will process the (features + timestamps) and produce the spin.
+*/
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -5,22 +12,30 @@
 #include <iostream>
 #include <vector>
 
-//Configuration
+//Configuration for test data generation
+//I found some balls in the woods. My calipers tell me so.
 #define BALL_DIAM_MM 42.67f
 #define BALL_CIRC_MM (float)(BALL_DIAM_MM * M_PI)
 #define DIMPLE_DIAM_MM (3.5f)
 #define DIMPLE_DIAM_RATIO_BALL_CIRC (DIMPLE_DIAM_MM/BALL_CIRC_MM)
 #define DIMPLE_DIAM_RATIO_BALL_DIAM (DIMPLE_DIAM_MM/BALL_DIAM_MM)
-#define N_DIMPLES 400
-#define N_FRAMES 5
-#define RPM_YAW 0
-#define RPM_PITCH 1000
-#define RPM_ROLL 0
-#define VISIBLE_RADIUS_OD .8
-#define VISIBLE_RADIUS_ID .2
-#define DROP_RATIO .2
+#define N_DIMPLES 400 //Estimate for whole ball
+#define N_FRAMES 5 //NOTE: if we process all relationships, it's O(N*(N-1)
+#define VISIBLE_RADIUS_OD .8 //Drop stuff beyond this
+#define VISIBLE_RADIUS_ID .2 //Drop stuff close to center than this(glare)
+#define DROP_RATIO .2 //drop some points randomly
 
-//macro functions
+//Configuration for shot
+#define RPM_YAW 0
+#define RPM_PITCH 98765
+#define RPM_ROLL 0
+
+//Configuration for solver
+#define USE_HOT_GARBAGE 0
+#define USE_NMS 1
+#define USE_PROFILER 0
+
+//macro functions - presentation is in RPM, but processing is rad*hz
 #define RPM2RADHZ(r) ((r) * 2.0 * M_PI / 60.0)
 #define RADHZ2RPM(r) ((r) * 60.0 / (2.0 * M_PI))
 
@@ -33,10 +48,23 @@ struct vec3
 	float x;
 	float y;
 	float z;
+	vec3 & operator+=(const vec3 & rhs)
+		{
+		this->x += rhs.x;
+		this->y += rhs.y;
+		this->z += rhs.z;
+		return *this;
+		}
+	vec3 & operator/(unsigned rhs)
+		{
+		this->x /= rhs;
+		this->y /= rhs;
+		this->z /= rhs;
+		return *this;
+		}
 	};
 
 typedef std::vector<vec3> vecs;
-
 struct framestamp
 	{
 	uint64_t ns;
@@ -329,6 +357,17 @@ static uint64_t gettime_ns(void)
 	return ts.tv_sec * 1000000000ULL + ts.tv_nsec;
 }
 
+#if USE_NMS
+local vec3 centroid(const std::vector<vec3> & input)
+{
+vec3 r = {0,0,0};
+for( auto i : input)
+	{
+	r += i;
+	}
+return r / input.size();
+}
+#endif
 
 int main()
 {
@@ -376,8 +415,8 @@ float yaw_step = 2 * yaw_range / YAW_CHUNK;
 float pitch_step = 2 * pitch_range / PITCH_CHUNK;
 float roll_step = 2 * roll_range / ROLL_CHUNK;
 
-#if 1
-//An example solver
+#if USE_HOT_GARBAGE
+//An example solver(hot-garbage approach)
 static const char * const stage_names[]={"coarse","mid","fine","ultra","hyper", "!!!"};
 
 for( unsigned refine = 0; refine < 5; refine++)
@@ -402,7 +441,30 @@ for( unsigned refine = 0; refine < 5; refine++)
 		<<RADHZ2RPM(best_d_roll)<<':'
 		<<best_score<<std::endl;
 	}
-#elif 1
+#elif USE_NMS
+/*A hybrid brute-Nelder-Mead-simplex solver
+
+Pass1: Because NMS gets stuck in local maxima easily, we brute-force scan for the best few points.
+Pass2: Nelder-Mead Simplex climbs the gradient hill formed by alinging more and more dimples more closely.
+Pass3: profit???
+*/
+static const char * const stage_names[]={"coarse","mid","fine","ultra","hyper", "!!!"};
+
+findBest
+	(
+	data,
+	best_d_yaw, yaw_range, yaw_step,
+	best_d_pitch, pitch_range, pitch_step,
+	best_d_roll, roll_range, roll_step,
+	best_score, best_d_yaw, best_d_pitch, best_d_roll
+	);
+std::cerr<<"brute"<<"fix:"
+	<<RADHZ2RPM(best_d_yaw)<<','
+	<<RADHZ2RPM(best_d_pitch)<<','
+	<<RADHZ2RPM(best_d_roll)<<':'
+	<<best_score<<std::endl;
+
+#elif USE_PROFILER
 //Infinite loop for profiling
 volatile uint64_t temp = 0;
 
