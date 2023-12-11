@@ -26,13 +26,13 @@ will process the (features + timestamps) and produce the spin.
 #define DROP_RATIO .2 //drop some points randomly
 
 //Configuration for shot
-#define RPM_YAW 0
-#define RPM_PITCH 98765
-#define RPM_ROLL 0
+#define RPM_YAW 444
+#define RPM_PITCH 9876
+#define RPM_ROLL 333
 
 //Configuration for solver
 #define USE_HOT_GARBAGE 0
-#define USE_NMS 1
+#define USE_NMS 1 //See: https://en.wikipedia.org/wiki/Nelder%E2%80%93Mead_method#One_possible_variation_of_the_NM_algorithm
 #define USE_PROFILER 0
 
 //macro functions - presentation is in RPM, but processing is rad*hz
@@ -248,6 +248,7 @@ local float evalScore(const framestamp & f1, const framestamp & f2)
 	//very, very slightly less accurate, yet faster :)
 	static constexpr float DOT_LIMIT_D = 1 - DOT_LIMIT;
 	static constexpr float DOT_LIMIT_D_INV = 1/(DOT_LIMIT_D);
+
 	for( unsigned k = 0; k < f2.points.size(); ++k)
 	{
 		//These limits allow us to scan a limited portion of
@@ -411,9 +412,9 @@ float roll_range = RPM2RADHZ(ROLL_SEARCH_RPM);
 #define YAW_CHUNK 10
 #define PITCH_CHUNK 20
 #define ROLL_CHUNK 8
-float yaw_step = 2 * yaw_range / YAW_CHUNK;
-float pitch_step = 2 * pitch_range / PITCH_CHUNK;
-float roll_step = 2 * roll_range / ROLL_CHUNK;
+float yaw_step = 2 * yaw_range / YAW_CHUNK / 3;
+float pitch_step = 2 * pitch_range / PITCH_CHUNK / 3;
+float roll_step = 2 * roll_range / ROLL_CHUNK / 3;
 
 #if USE_HOT_GARBAGE
 //An example solver(hot-garbage approach)
