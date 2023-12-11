@@ -10,9 +10,10 @@ with open('output.csv', newline='') as csvfile:
 	r = csv.reader(csvfile, delimiter=',', quotechar='|')
 	next(r)
 	for row in r:
-		yaw.append(float(row[0]))
-		pitch.append(float(row[1]))
-		roll.append(float(row[2]))
+		pipi = 3.14159 * 2.0
+		yaw.append(60*float(row[0])/pipi)
+		pitch.append(60*float(row[1])/pipi)
+		roll.append(60*float(row[2])/pipi)
 		score.append(int(row[3]))
 
 # plot

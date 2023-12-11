@@ -5,19 +5,24 @@
 #include <iostream>
 #include <vector>
 
+//Configuration
 #define BALL_DIAM_MM 42.67f
 #define BALL_CIRC_MM (float)(BALL_DIAM_MM * M_PI)
 #define DIMPLE_DIAM_MM (3.5f)
 #define DIMPLE_DIAM_RATIO_BALL_CIRC (DIMPLE_DIAM_MM/BALL_CIRC_MM)
 #define DIMPLE_DIAM_RATIO_BALL_DIAM (DIMPLE_DIAM_MM/BALL_DIAM_MM)
 #define N_DIMPLES 400
-#define N_FRAMES 20
+#define N_FRAMES 5
 #define RPM_YAW 0
 #define RPM_PITCH 1000
 #define RPM_ROLL 0
 #define VISIBLE_RADIUS_OD .8
 #define VISIBLE_RADIUS_ID .2
 #define DROP_RATIO .2
+
+//macro functions
+#define RPM2RADHZ(r) ((r) * 2.0 * M_PI / 60.0)
+#define RADHZ2RPM(r) ((r) * 60.0 / (2.0 * M_PI))
 
 //Can use this to prevent inlining for profiling
 #define local static
@@ -153,8 +158,9 @@ local dataset genData(unsigned n, float d_yaw, float d_pitch, float d_roll)
 		//Rotate the vectors forward in time according to current timestamp
 		framestamp frame = {ts};
 		frame.points = rotate(frame0.points, yaw, pitch, roll);
-		frame = filterPct(frame, DROP_RATIO);
-		frame = filterVisible(frame, VISIBLE_RADIUS_ID, VISIBLE_RADIUS_OD);
+		std::cerr<<frame.points[0].x<<frame.points[0].y<<frame.points[0].z<<std::endl;
+//		frame = filterPct(frame, DROP_RATIO);
+//		frame = filterVisible(frame, VISIBLE_RADIUS_ID, VISIBLE_RADIUS_OD);
 
 		ret.frames.push_back(frame);
 		ts += 588 * 1000; //1700fps
@@ -291,28 +297,25 @@ local void findBest
 	float roll_range,
 	float roll_grain,
 	uint64_t & best_score,
-	float & best_rpm_yaw,
-	float & best_rpm_pitch,
-	float & best_rpm_roll
+	float & best_d_yaw,
+	float & best_d_pitch,
+	float & best_d_roll
 	)
 {
-	for( float rpm_yaw = yaw - yaw_range; rpm_yaw < yaw + yaw_range; rpm_yaw += yaw_grain)
+	for( float d_yaw = yaw - yaw_range; d_yaw < yaw + yaw_range; d_yaw += yaw_grain)
 	{
-		float d_yaw = rpm_yaw / 60;
-		for( float rpm_pitch = pitch - pitch_range; rpm_pitch < pitch + pitch_range; rpm_pitch += pitch_grain)
+		for( float d_pitch = pitch - pitch_range; d_pitch < pitch + pitch_range; d_pitch += pitch_grain)
 		{
-			float d_pitch = rpm_pitch / 60;
-			for( float rpm_roll = roll - roll_range; rpm_roll < roll + roll_range; rpm_roll += roll_grain)
+			for( float d_roll = roll - roll_range; d_roll < roll + roll_range; d_roll += roll_grain)
 			{
-				float d_roll = rpm_roll / 60;
 				uint64_t score = evalScore(data, d_yaw, d_pitch, d_roll);
 				std::cout << d_yaw <<','<< d_pitch << ',' << d_roll << ',' << score << std::endl;
 				if( score > best_score)
 				{
 					best_score = score;
-					best_rpm_yaw = rpm_yaw;
-					best_rpm_pitch = rpm_pitch;
-					best_rpm_roll = rpm_roll;
+					best_d_yaw = d_yaw;
+					best_d_pitch = d_pitch;
+					best_d_roll = d_roll;
 				}
 			}
 		}
@@ -329,9 +332,9 @@ static uint64_t gettime_ns(void)
 
 int main()
 {
-float d_yaw = RPM_YAW * 2 * M_PI / 60;
-float d_pitch = RPM_PITCH * 2 * M_PI / 60;
-float d_roll = RPM_ROLL * 2 * M_PI / 60;
+float d_yaw = RPM2RADHZ(RPM_YAW);
+float d_pitch = RPM2RADHZ(RPM_PITCH);
+float d_roll = RPM2RADHZ(RPM_ROLL);
 
 //std::cout << "Sim Params:"<<d_yaw<<','<<d_pitch<<','<<d_roll << std::endl;
 
@@ -361,14 +364,14 @@ std::cout << "d_yaw,d_pitch,d_roll,score" << std::endl;
 #define PITCH_SEARCH_RPM 12000
 #define ROLL_SEARCH_RPM 500
 uint64_t best_score = 0;
-float best_rpm_yaw = 0, best_rpm_pitch = 2000, best_rpm_roll = 0;
+float best_d_yaw = 0, best_d_pitch = 0, best_d_roll = 0;
 
-float yaw_range = YAW_SEARCH_RPM;
-float pitch_range = PITCH_SEARCH_RPM;
-float roll_range = ROLL_SEARCH_RPM;
-#define YAW_CHUNK 8
-#define PITCH_CHUNK 15
-#define ROLL_CHUNK 6
+float yaw_range = RPM2RADHZ(YAW_SEARCH_RPM);
+float pitch_range = RPM2RADHZ(PITCH_SEARCH_RPM);
+float roll_range = RPM2RADHZ(ROLL_SEARCH_RPM);
+#define YAW_CHUNK 10
+#define PITCH_CHUNK 20
+#define ROLL_CHUNK 8
 float yaw_step = 2 * yaw_range / YAW_CHUNK;
 float pitch_step = 2 * pitch_range / PITCH_CHUNK;
 float roll_step = 2 * roll_range / ROLL_CHUNK;
@@ -382,10 +385,10 @@ for( unsigned refine = 0; refine < 5; refine++)
 	findBest
 		(
 		data,
-		best_rpm_yaw, yaw_range, yaw_step,
-		best_rpm_pitch, pitch_range, pitch_step,
-		best_rpm_roll, roll_range, roll_step,
-		best_score, best_rpm_yaw, best_rpm_pitch, best_rpm_roll
+		best_d_yaw, yaw_range, yaw_step,
+		best_d_pitch, pitch_range, pitch_step,
+		best_d_roll, roll_range, roll_step,
+		best_score, best_d_yaw, best_d_pitch, best_d_roll
 		);
 	yaw_range = yaw_step * 2;
 	pitch_range = pitch_step * 2;
@@ -393,7 +396,11 @@ for( unsigned refine = 0; refine < 5; refine++)
 	yaw_step = 2 * yaw_range / YAW_CHUNK;
 	pitch_step = 2 * pitch_range / PITCH_CHUNK;
 	roll_step = 2 * roll_range / ROLL_CHUNK;
-	std::cerr<<stage_names[refine]<<"fix:"<<best_rpm_yaw<<','<<best_rpm_pitch<<','<<best_rpm_roll<<':'<<best_score<<std::endl;
+	std::cerr<<stage_names[refine]<<"fix:"
+		<<RADHZ2RPM(best_d_yaw)<<','
+		<<RADHZ2RPM(best_d_pitch)<<','
+		<<RADHZ2RPM(best_d_roll)<<':'
+		<<best_score<<std::endl;
 	}
 #elif 1
 //Infinite loop for profiling
