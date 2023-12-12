@@ -1,0 +1,67 @@
+===TODOs===
+You must set the ball diameter and the dimple size approximately.
+There are used to generate some constants.
+
+===Optical Requirements===
+The image sequences must be accurately timestamped, then image-processed
+to extract list of features, where each feature is a vector from the
+center of the ball to a dimple. These vectors should then be offset
+by the ball-center, and scaled by the actual ball-diameter, so that they
+are unit-vectors varying only in angle.
+
+Note also that any image distortion correction must be applied before
+the spin-matching process.
+
+===Choosing the frames used for processing===
+N_FRAMES is used for demo data.
+Each input frame is compared with every other, which scales with the
+combination function (NCR), so each increase will cause it to
+run on a much larger number of frame pairs. Ex: increasing from N to N+1 adds
+N additional comparisons. Ex:
+N_FRAMES: N image pairs
+	   2: 1
+	   3: 3
+       4: 6
+       5: 10
+       ...
+      10: 45
+       ...
+      15: 105
+       ...
+      20: 190
+It might be worth adjusting the algorimth to consider a small number of frames
+at first for the coarse search, then use more frames for the fine search, which
+usually converges much, much faster. Also, selection of frames matters in a few ways.
+For the coarse search, adjacent or nearby frames are good, because the ball has spun
+the minimum amount. Later, further apart frames are more useful too. Also, if the
+acquision frametime is not constant, mixing multiple frame intervals is a great idea,
+as it further reduces the small risk of coarse search picking an ambiguity.
+
+===Demo dropout tuning===
+VISIBLE_RADIUS_OD - drop vectors from the outer edge of the ball, where the lighting angle is poor.
+VISIBLE_RADIUS_ID - drop vectors near the center where retro-glare may occur.
+DROP_RATIO - drop some points randomly to estimate feature detector drops.
+
+===Vector-matching cost function tuning===
+I use a clipped & scaled dot-product. Roughly, if the vectors are misaligned by too much
+(on the order of half a dimple), the dot-product is zero. If the vectors are aligned
+identically, the dot-product is one. If the vectors are closely aligned, the result is
+between 0 and 1, with linear interpolation between distance where 0 is clipped and
+identical vector pairs.
+
+You could use another cost-function, this one I chose because it is fast, not good,
+and we always make it up in volume with the number of points. Choosing a good function:
+    1) Closer vectors should count the same or more than further vectors.
+    2) Vectors misaligned by more than a dimple should not count(0 score).
+       Otherwise each vector will match against the wrong vectors too often.
+       A little bit is ok, and this forms our noise floor when otherwise mismatched.
+    3) Fast - this will get called about NCR(N_FRAMES,2) * N_DIMPLES *log(N_DIMPLES) times.
+
+===Coarse Search Step Size and Range===
+Coarse-search is a brute-force algorithm. You must set the range you want it to scan
+in terms of yaw, pitch, and roll spin min/max, as well as a step size. The step size
+must be small enough to unambigously identify the main lobe/peak of the cost function,
+when the coarse guess and gotten slightly close to the actual goal. To test this,
+run the coarse search on test data where the true RPM vector is going to be straddled,
+approximately stpped like TRUE_RPM - YAW_STEP/2, then TRUE_RPM + YAW_STEP/2, for each
+dimension.
