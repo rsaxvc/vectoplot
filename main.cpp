@@ -30,10 +30,10 @@ will process the (features + timestamps) and produce the spin.
 #define RPM_PITCH 9876
 #define RPM_ROLL 333
 
-//Configuration for solver
-#define USE_HOT_GARBAGE 0
+//Configuration for solver - first takes priority
+#define USE_HOT_GARBAGE 0 //do not use hot-garbage.
 #define USE_NMS 1 //See: https://en.wikipedia.org/wiki/Nelder%E2%80%93Mead_method#One_possible_variation_of_the_NM_algorithm
-#define USE_PROFILER 0
+#define USE_PROFILER 0 //infinite loop
 
 //macro functions - presentation is in RPM, but processing is rad*hz
 #define RPM2RADHZ(r) ((r) * 2.0 * M_PI / 60.0)
