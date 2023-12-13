@@ -20,7 +20,7 @@ will process the (features + timestamps) and produce the spin.
 #define DIMPLE_DIAM_RATIO_BALL_CIRC (DIMPLE_DIAM_MM/BALL_CIRC_MM)
 #define DIMPLE_DIAM_RATIO_BALL_DIAM (DIMPLE_DIAM_MM/BALL_DIAM_MM)
 #define N_DIMPLES 400 //Estimate for whole ball
-#define N_FRAMES 8 //NOTE: if we process all relationships, it's O(N*(N-1)
+#define N_FRAMES 5 //NOTE: if we process all relationships, it's O(N*(N-1)
 #define VISIBLE_RADIUS_OD .8 //Drop stuff beyond this
 #define VISIBLE_RADIUS_ID .2 //Drop stuff close to center than this(glare)
 #define DROP_RATIO .2 //drop some points randomly
@@ -99,7 +99,7 @@ vec3 operator*(float lhs, const vec3 & rhs)
 typedef std::vector<vec3> vecs;
 struct score_t
 	{
-	uint64_t score;
+	float score;
 	vec3 v;
 	bool operator<(const score_t &b)
 		{
@@ -327,7 +327,7 @@ local float evalScore(const framestamp & f1, const framestamp & f2)
 	return accum;
 }
 
-local uint64_t evalScore(const dataset & data, float d_yaw, float d_pitch, float d_roll)
+local float evalScore(const dataset & data, float d_yaw, float d_pitch, float d_roll)
 {
 	float accum = 0;
 	dataset rotated;
@@ -361,7 +361,7 @@ local uint64_t evalScore(const dataset & data, float d_yaw, float d_pitch, float
 	return accum;
 }
 
-local uint64_t evalScore(const dataset & data, const vec3 & v)
+local float evalScore(const dataset & data, const vec3 & v)
 {
 return evalScore(data, v.x, v.y, v.z);
 }
@@ -378,7 +378,7 @@ local void findBestCoarse
 	float roll,
 	float roll_range,
 	float roll_grain,
-	uint64_t & best_score,
+	float & best_score,
 	float & best_d_yaw,
 	float & best_d_pitch,
 	float & best_d_roll,
@@ -391,7 +391,7 @@ local void findBestCoarse
 		{
 			for( float d_roll = roll - roll_range; d_roll < roll + roll_range; d_roll += roll_grain)
 			{
-				uint64_t score = evalScore(data, d_yaw, d_pitch, d_roll);
+				float score = evalScore(data, d_yaw, d_pitch, d_roll);
 				std::cout << d_yaw <<','<< d_pitch << ',' << d_roll << ',' << score << std::endl;
 
 				score_t result = {score, {d_yaw, d_pitch, d_roll}};
@@ -468,14 +468,14 @@ std::cout << "d_yaw,d_pitch,d_roll,score" << std::endl;
 #define YAW_SEARCH_RPM 2500
 #define PITCH_SEARCH_RPM 12000
 #define ROLL_SEARCH_RPM 500
-uint64_t best_score = 0;
+float best_score = 0;
 float best_d_yaw = 0, best_d_pitch = 0, best_d_roll = 0;
 
 float yaw_range = RPM2RADHZ(YAW_SEARCH_RPM);
 float pitch_range = RPM2RADHZ(PITCH_SEARCH_RPM);
 float roll_range = RPM2RADHZ(ROLL_SEARCH_RPM);
-#define YAW_CHUNK 12
-#define PITCH_CHUNK 25
+#define YAW_CHUNK 10
+#define PITCH_CHUNK 15
 #define ROLL_CHUNK 10
 float yaw_step = yaw_range / YAW_CHUNK;
 float pitch_step = pitch_range / PITCH_CHUNK;
@@ -677,7 +677,7 @@ for(size_t i = 0; i < 25; ++i)
 	}
 
 //Manual loop count for now.
-for(unsigned i = 0; i < 10000; ++i)
+for(unsigned i = 0; i < 500; ++i)
 	{
 	auto & xworst = nms_state.back();
 	float min_x = INFINITY,min_y = INFINITY,min_z=INFINITY,max_x=-INFINITY,max_y=-INFINITY,max_z=-INFINITY;
@@ -694,12 +694,12 @@ for(unsigned i = 0; i < 10000; ++i)
 	float dx = max_x - min_x;
 	float dy = max_y - min_y;
 	float dz = max_z - min_z;
-	max_x += .1 * dx;
-	max_y += .1 * dy;
-	max_z += .1 * dz;
-	min_x -= .1 * dx;
-	min_y -= .1 * dy;
-	min_z -= .1 * dz;
+	max_x += .3 * dx + 10;
+	max_y += .3 * dy + 10;
+	max_z += .3 * dz + 10;
+	min_x -= .3 * dx - 10;
+	min_y -= .3 * dy - 10;
+	min_z -= .3 * dz - 10;
 
 	for(unsigned j = 0; j < 10000; ++j)
 		{
@@ -708,10 +708,10 @@ for(unsigned i = 0; i < 10000; ++i)
 		xr.v.y = randf(min_y,max_y);
 		xr.v.z = randf(min_z,max_z);
 		xr.score = evalScore(data, xr.v);
+		std::cout << xr.v.x <<','<< xr.v.y << ',' << xr.v.z << ',' << xr.score << std::endl;
 		if(xr.score >= xworst.score)
 			{
 			std::cerr<<"derping:\t"<<i<<",\t"<<j<<",\t"<<xr.score<<std::endl;
-			std::cout << xr.v.x <<','<< xr.v.y << ',' << xr.v.z << ',' << xr.score << std::endl;
 
 			//Step 1: sort the list.
 			xworst = xr;
